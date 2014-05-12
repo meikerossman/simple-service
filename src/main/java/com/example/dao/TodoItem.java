@@ -6,12 +6,14 @@ public class TodoItem {
 	private String body;
 	private boolean done;
 	
+	public TodoItem() {}
+	
 	public TodoItem(String id, String body, Boolean complete) {
 		setId(id);
 		setBody(body);
 		setDone(done);
 	}
-	
+
 	public String getId() {
 		return id;
 	}

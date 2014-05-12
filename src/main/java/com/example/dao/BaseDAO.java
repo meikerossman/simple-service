@@ -15,5 +15,5 @@ public interface BaseDAO {
 	//PUT
 	TodoItem updatePut(TodoItem newItem);
 	//PATCH
-	TodoItem updatePatch(String id);
+	TodoItem updatePatch(TodoItem newItem);
 }

@@ -6,6 +6,8 @@ public class TodoItem {
 	String body;
 	Boolean complete;
 	
+	public TodoItem(){}
+	
 	public TodoItem(String title, String body, Boolean complete) {
 		setTitle(title);
 		setBody(body);

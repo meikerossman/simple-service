@@ -17,6 +17,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.Response.StatusType;
 
+import jersey.repackaged.com.google.common.base.Preconditions;
+
 import com.example.dao.TodoItem;
 import com.example.dao.DAOFactory;
 
@@ -36,51 +38,48 @@ public class MyResource {
     }
     
     @POST
-    @Path("/create/{id}")
-    public Response createItem(@PathParam("id") String id, @FormParam("body") String body, @FormParam("done") String done) {   
-    	Boolean status = Boolean.valueOf(done);
-    	TodoItem item = new TodoItem(id, body, status);    	
+    @Path("/items")
+    public Response createItem(@FormParam("id") String id, @FormParam("body") String body, @FormParam("done") String done) {   
+    	TodoItem item = itemFieldVerification(id, body, done);   	
     	DAOFactory.getDAO().save(item);
-    	return Response.accepted(item).build();
+    	return resourceResponseCheck(item, Status.ACCEPTED, Status.BAD_REQUEST);    	  	
     }
     
     @GET
     @Path("/get/items")
     public Response getAllItems() {
-    	String allFormattedItems = DAOFactory.getDAO().getAllItems();
-    	return Response.ok("\n\n--------------\n\n"+allFormattedItems+"\n\n--------------\n\n").build();
+    	String allFormattedItems = DAOFactory.getDAO().getAllItems();    	
+    	return resourceResponseCheck(allFormattedItems, Status.OK, Status.NOT_FOUND, 
+    			"\n\n--------------\n\n"+allFormattedItems+"\n\n--------------\n\n");
     }
     
     @GET
     @Path("/get/items/{id}")
     public Response getItem(@PathParam("id") String id){    	
     	TodoItem item = DAOFactory.getDAO().get(id);
-    	    	
-    	return Response.ok("\n\n--------------\n\nItem: " + id + "\nBody: " + item.getBody() + " \nStatus: " + item.isDone()+"\n\n--------------\n\n").build();
+    	return resourceResponseCheck(item, Status.ACCEPTED, Status.NOT_FOUND, 
+    			"\n\n--------------\n\nItem: " + id + 
+    			"\nBody: " + item.getBody() + 
+    			" \nStatus: " + item.isDone()+"\n\n--------------\n\n");  	
     }
     
     
     @PUT
     @Path("/items/")
-    public Response updateTodoItem(@PathParam("id") String id, @FormParam("body") String body, @FormParam("done") String done){
-    	Boolean status = Boolean.valueOf(done);
-    	TodoItem item = new TodoItem(id, body, status);
+    public Response updateTodoItem(@FormParam("id") String id, @FormParam("body") String body, @FormParam("done") String done){
+    	TodoItem item = itemFieldVerification(id, body, done);   	
     	DAOFactory.getDAO().updatePut(item);
-    	return Response.status(Status.RESET_CONTENT).build();
+    	return resourceResponseCheck(item, Status.RESET_CONTENT, Status.BAD_REQUEST);
     }
- 
-    //@PATCH
+    
+    //TODO - figure out how to turn this into a PATCH
     @PUT
     @Path("/items/{id}")
-    public Response setComplete(@PathParam("id") String id, @FormParam("done") String done) {   
-    	boolean status = Boolean.valueOf(done);
-    	if(status==true){
-    		TodoItem item = DAOFactory.getDAO().updatePatch(id);    	
-        	return Response.status(Status.ACCEPTED).build();
-    	} else {
-    		return Response.status(Status.BAD_REQUEST).build();
-    	}
-    		
+    public Response updateItem(@PathParam("id") String id, @FormParam("body") String body, @FormParam("done") String done){
+    	TodoItem itemNewValues = itemFieldVerification(id, body, done);
+    	//TODO _ one last thing here allow passing of empty body or status !!!
+    	TodoItem itemOldValues = DAOFactory.getDAO().updatePatch(itemNewValues);
+    	return resourceResponseCheck(itemOldValues, Status.ACCEPTED, Status.BAD_REQUEST, "Updated!");
     }
     
     @DELETE
@@ -90,18 +89,52 @@ public class MyResource {
     	return Response.ok("\n\n--------------\n\nItem: " + id + " deleted!\n\n").build();
     }
     
-    // Security Issue - do not allow requests like that
     @DELETE
     @Path("/items/")
-    public Response deleteAll(@PathParam("id") String id){
-    	DAOFactory.getDAO().delete(id);
+    public Response deleteAll(){    	
     	return Response.status(Status.BAD_REQUEST).build();
     }
+    
+    private Response resourceResponseCheck(Object object, Status successStatus, Status errorStatus){
+    	if(object != null){
+    		return Response.status(successStatus).build();
+    	} else {
+    		return Response.status(errorStatus).build();
+    	}
+    }
+    
+    private Response resourceResponseCheck(Object object, Status successStatus, Status errorStatus, String successMessage){
+    	if(object != null){
+    		return Response.status(successStatus).entity(successMessage).build();
+    	} else {
+    		return Response.status(errorStatus).build();
+    	}
+    }
+    
+    private TodoItem itemFieldVerification(String id, String body, String done){
+		TodoItem todoItem = new TodoItem();
+		if("".equals(id) || "".equals(body) || "".equals(done)){
+			return null;			
+		} else {
+			todoItem.setId(id);
+			todoItem.setBody(body);
+			if(done.equals("true") || done.equals("false")){
+				todoItem.setDone(Boolean.getBoolean(done));
+				return todoItem;
+			} else {
+				return null;
+			}			
+		}
+	}
     
      
     /* 
     	//// OTHER EXAMPLES //////
     */
+    
+    // NOTES
+    // return Response.ok("\n\n--------------\n\n"+allFormattedItems+"\n\n--------------\n\n").build();
+	//return Response.accepted(item).build();  
     
     /**
      * Method handling HTTP GET requests. The returned object will be sent
@@ -121,6 +154,4 @@ public class MyResource {
     	return Response.ok("My name is " + name + " and I'm " + age + " yrs old").header("X-Custom", "asd").build();
     
     }
-    
-    
 }
